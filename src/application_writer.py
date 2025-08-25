@@ -22,7 +22,7 @@ def ensure_env_var(var_name: str):
         logger.debug(f"[환경변수 {var_name}] 등록되어 있음.")
     return os.environ[var_name]
 
-def write_document(
+def write_application(
     user: User,
     pdf_path: Union[str, Path],
 ):
