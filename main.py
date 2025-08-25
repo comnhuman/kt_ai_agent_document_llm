@@ -13,6 +13,7 @@
 '''
 
 from src.vllm_matcher import VLLMMatcher
+from src.document_writer import write_document
 from src.user import User
 from src.parsing import BizInfoAPI
 
@@ -36,8 +37,9 @@ if __name__ == "__main__":
     ###############################
 
 
-    ### JSON 파일 기반 신청서 작성 ###
-    write_support_program()
+    ### PDF 파일 기반 신청서 작성 ###
+    pdf_path = ""
+    write_document(user, pdf_path)
     
     
     
