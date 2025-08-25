@@ -2,9 +2,12 @@ from pathlib import Path
 from openai import OpenAI
 from typing import Union
 from src.user import User
+from dotenv import load_dotenv
 import os
 import base64
 import logging
+
+load_dotenv()
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,7 +22,7 @@ def ensure_env_var(var_name: str):
         os.environ[var_name] = value
         logger.info(f"[환경변수 {var_name}]가 새로 등록되었습니다.")
     else:
-        logger.debug(f"[환경변수 {var_name}] 등록되어 있음.")
+        logger.info(f"[환경변수 {var_name}] 등록되어 있음.")
     return os.environ[var_name]
 
 def write_application(
@@ -126,3 +129,21 @@ def write_application(
     logger.info(response.output_text)
 
     return response.output_text
+
+if __name__ == "__main__":
+    user = User(
+        "test",
+        "02",
+        ["기술", "경영"],
+        "제 사업은 개인정보 관리실태 컨설팅입니다. 현재 AI 를 활용한 자동화 사업에 도전하고 있습니다."
+        )
+
+    import requests
+    import tempfile
+    dummy_pdf = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+    response = requests.get(dummy_pdf)
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    tmp.write(response.content)
+    tmp.close()
+
+    write_application(user, tmp.name)
