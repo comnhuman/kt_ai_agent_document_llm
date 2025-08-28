@@ -146,7 +146,7 @@ def download_and_convert(data, download_dir="downloads", pdf_output_dir="변환�
 #메인 함수. KT LLM이 적절 사업 json 목록을 보내면 그게 data 변수에 들어가면 된다
 
 if __name__ == "__main__":
-    with open("기술_support_programs.json", "r", encoding="utf-8") as f:     #데모를 위해 .json파일을 열었음. 나중에 main.py에서 받아올 예정
+    with open("matched_support_programs.json", "r", encoding="utf-8") as f:    
         data = json.load(f)
 
 # jsonArray 확인
