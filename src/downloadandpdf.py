@@ -2,8 +2,45 @@ import os
 import requests
 import subprocess
 from pathlib import Path
+from zipfile import ZipFile
 import json
-import zipfile
+
+def handle_zip(file_path, pdf_output_dir):    #unar
+    """
+    압축파일 담당
+    """
+    pdf_files = []
+    extract_dir = Path(file_path).with_suffix("")
+    os.makedirs(extract_dir, exist_ok=True)
+
+    try:
+        subprocess.run(
+            ["unar", "-o", str(extract_dir), "-f", str(file_path)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )  
+        print(f"✅ 압축 해제 완료: {file_path} -> {extract_dir}")
+    except Exception as e:
+        #print(f"unar 실패: {e}. zipfile로 재시도.")
+        try:
+            with ZipFile(file_path, 'r') as zf:   #unar 실패시 zipfile로 압축 해제
+                zf.extractall(extract_dir)
+        except Exception as e2:
+            print(f"zipfile도 실패: {e2}")
+            return pdf_files
+
+    # rglob 순회 (subdirectory까지 전부 순회하는 방식) + PDF 변환
+    for extracted_path in extract_dir.rglob("*"):
+        if extracted_path.is_file():
+            #try:
+                pdf_file = convert_hwp_to_pdf(str(extracted_path), pdf_output_dir)
+                pdf_files.append(pdf_file)
+                print(f"✅ ZIP 안 PDF 변환 완료: {pdf_file}")
+            #except Exception as e:
+                #print(f"❌ ZIP 안 PDF 변환 실패: {extracted_path} ({e})")
+
+    return pdf_files
 
 def download_hwp_files(data, download_dir="downloads"):
     """
@@ -17,7 +54,6 @@ def download_hwp_files(data, download_dir="downloads"):
 
     for item in data.get("jsonArray", []):
         folder_name = item.get("pblancNm")
-        #pblanc_id = item.get("pblancId")
         flpthNm = item.get("flpthNm")
         fileNm = item.get("fileNm")
 
@@ -59,50 +95,20 @@ def convert_hwp_to_pdf(hwp_file, output_dir=None):
         output_dir = str(Path(hwp_file).parent)
     os.makedirs(output_dir, exist_ok=True)
 
-    result = subprocess.run([
+    result = subprocess.run([      #libreoffice 호출
         "soffice", "--headless",
-        "--infilter=Hwp2002_File",
         "--convert-to", "pdf:writer_pdf_Export",
         "--outdir", output_dir,
         hwp_file
     ], capture_output=True)
 
-    if result.returncode != 0:
-        raise RuntimeError(f"HWP -> PDF 변환 실패: {result.stderr.decode('utf-8')}")
+    #if result.returncode != 0:
+        #raise RuntimeError(f"HWP -> PDF 변환 실패: {result.stderr.decode('utf-8')}")
 
     pdf_path = Path(output_dir) / (Path(hwp_file).stem + ".pdf")
     return str(pdf_path)
 
-def handle_zip(file_path, pdf_output_dir):    #zip파일 전용 핸들러 (파일 이름 한글 깨짐 방지 위함)
-    pdf_files = []
-    extract_dir = Path(file_path).with_suffix("")
-    os.makedirs(extract_dir, exist_ok=True)
 
-    with zipfile.ZipFile(file_path) as zf:
-        for info in zf.infolist():
-            try:
-                # 한글 깨짐 방지
-                try:
-                    filename = info.filename.encode('cp437').decode('euc-kr')
-                except UnicodeDecodeError:
-                    filename = info.filename
-
-                extracted_path = extract_dir / Path(filename).name
-                with open(extracted_path, "wb") as f:
-                    f.write(zf.read(info.filename))
-
-                # PDF 변환
-                try:
-                    pdf_file = convert_hwp_to_pdf(str(extracted_path), pdf_output_dir)
-                    pdf_files.append(pdf_file)
-                    print(f"✅ ZIP 안 PDF 변환 완료: {pdf_file}")
-                except Exception as e:
-                    print(f"❌ ZIP 안 PDF 변환 실패: {extracted_path} ({e})")
-
-            except Exception as e:
-                print(f"❌ ZIP 압축 해제 실패: {info.filename} ({e})")
-    
-    return pdf_files
 
 def download_and_convert(data, download_dir="downloads", pdf_output_dir="변환된 pdf"):
     """
@@ -119,10 +125,7 @@ def download_and_convert(data, download_dir="downloads", pdf_output_dir="변환�
     for file_path in downloaded_files:
         ext = Path(file_path).suffix.lower()
         try:
-            # 원본 파일이 있는 폴더명
-            original_folder = Path(file_path).parent.name
-            # PDF 저장 폴더: pdf_output_dir / original_folder
-            save_pdf_dir = Path(pdf_output_dir) / original_folder
+            save_pdf_dir = Path(pdf_output_dir)
             os.makedirs(save_pdf_dir, exist_ok=True)
 
 
@@ -143,13 +146,11 @@ def download_and_convert(data, download_dir="downloads", pdf_output_dir="변환�
 #메인 함수. KT LLM이 적절 사업 json 목록을 보내면 그게 data 변수에 들어가면 된다
 
 if __name__ == "__main__":
-    with open("경영_support_programs.json", "r", encoding="utf-8") as f:     #데모를 위해 .json파일을 열었음. 나중에 main.py에서 받아올 예정
+    with open("기술_support_programs.json", "r", encoding="utf-8") as f:     #데모를 위해 .json파일을 열었음. 나중에 main.py에서 받아올 예정
         data = json.load(f)
 
 # jsonArray 확인
 items = data.get("jsonArray", [])
-
-#os.makedirs("downloads", exist_ok=True).  #src 폴더에 저장할거면 수정하면 됨
 
 # 필요한 필드만 추출
 result = []
@@ -161,12 +162,4 @@ for item in items:
     }
     result.append(filtered)
 pdf_list = download_and_convert(data)
-print("모든 PDF 변환 완료:", pdf_list)
-
-
-
-
-
-
-
-
+print("모든 PDF 변환 완료")
