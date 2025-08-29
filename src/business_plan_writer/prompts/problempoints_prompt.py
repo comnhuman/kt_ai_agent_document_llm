@@ -1,5 +1,5 @@
-from src.proposal_writer.schemas import ProblemPointsInfo
-from src.proposal_writer.utils import build_tree
+from src.business_plan_writer.schemas import ProblemPointsInfo
+from src.business_plan_writer.utils import build_tree
 
 prompt = {
     "user": f'''스키마에서 이번에 채워야 할 필드는

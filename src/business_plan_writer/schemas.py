@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Union
 
 class GeneralMember(BaseModel):
     """팀 구성 현황(대표자 본인 제외)의 한 행"""
