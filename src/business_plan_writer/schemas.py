@@ -245,3 +245,10 @@ class Summary(BaseModel):
         default="",
         description="팀 구성: 대표자, 팀원, 협력 파트너 등 역할과 활용 계획"
     )
+
+class FileName(BaseModel):
+    """사업계획서 파일명"""
+    filename: str = Field(
+        default="사업계획서",
+        description="생성된 사업계획서 파일명"
+    )

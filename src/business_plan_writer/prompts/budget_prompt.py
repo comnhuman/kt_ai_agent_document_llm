@@ -16,9 +16,9 @@ prompt = {
 [작성 규칙]
 1) 반드시 한국어로 작성.
 
-[검색된 참고자료]
-- 회사DB: None
-- 공고문DB: None
+[참고자료]
+- 회사: {"{companyinfo}"}
+- 공고: {"{bizinfo}"}
 
-위 정보를 참고하여 {list(BudgetInfo.model_fields.keys())} 항목을 작성하라.'''
+위 정보를 참고하여 {"{request}"}'''
 }

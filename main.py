@@ -13,7 +13,7 @@
 '''
 
 from src.vllm_matcher import VLLMMatcher
-from src.application_writer import write_application
+from src.business_plan_writer.core import BusinessPlanWriter
 from src.user import User
 from src.parsing import BizInfoAPI
 
@@ -37,9 +37,9 @@ if __name__ == "__main__":
     ###############################
 
 
-    ### PDF 파일 기반 신청서 작성 ###
-    pdf_path = ""
-    write_application(user, pdf_path)
+    ### 사업계획서 작성 ###
+    bizinfo = {}                        # json파일의 데이터(매칭된 모든 데이터가 아닌, 공고 하나)
+    BusinessPlanWriter(user, bizinfo)
     
     
     

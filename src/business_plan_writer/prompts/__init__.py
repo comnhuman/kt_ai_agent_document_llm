@@ -6,6 +6,7 @@ from . import strategy_prompt
 from . import summary_prompt
 from . import system_prompt
 from . import team_prompt
+from . import filename_prompt
 
 __all__ = [
     "budget_prompt",
@@ -16,4 +17,5 @@ __all__ = [
     "summary_prompt",
     "system_prompt",
     "team_prompt",
+    "filename_prompt"
 ]

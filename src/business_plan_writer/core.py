@@ -1,5 +1,6 @@
 from src.business_plan_writer import schemas
 from src.business_plan_writer.utils import render_docx_template
+from src.user import User
 import src.business_plan_writer.prompts as prompts
 
 from langchain_openai import ChatOpenAI
@@ -23,6 +24,7 @@ class BusinessPlanWriter:
         schemas.StrategyInfo: prompts.strategy_prompt.prompt,
         schemas.TeamInfo: prompts.team_prompt.prompt,
         schemas.Summary: prompts.summary_prompt.prompt,
+        schemas.FileName: prompts.filename_prompt.prompt
     }
 
     _store = {}
@@ -40,7 +42,9 @@ class BusinessPlanWriter:
         raise
 
 
-    def __init__(self, llm=None, session_id=None):
+    def __init__(self, user: User, bizinfo: dict, llm=None, session_id=None):
+        self.user = user
+        self.bizinfo = bizinfo
         self.llm = llm or self._default_llm
         self.session_id = session_id or str(uuid.uuid4())
         self.history = self._get_session_history()
@@ -72,9 +76,13 @@ class BusinessPlanWriter:
                 ), 
             ]
         )
+        prompt = prompt.partial(
+            companyinfo=self.user.__dict__,
+            bizinfo=self.bizinfo
+        )
         return prompt | self.llm.with_structured_output(schema)
 
-    def write_general_status(self):
+    def write_general_status(self) -> schemas.GeneralInfo:
         request = f"{list(schemas.GeneralInfo.model_fields.keys())} 항목을 작성하라."
 
         try:
@@ -87,7 +95,7 @@ class BusinessPlanWriter:
         logger.info("GeneralInfo 작성 완료 | 생성 필드 수=%d", len(out.model_dump()))
         return out
 
-    def write_problem(self):
+    def write_problem(self) -> schemas.ProblemPointsInfo:
         request = f"{list(schemas.ProblemPointsInfo.model_fields.keys())} 항목을 작성하라."
         
         try:
@@ -100,7 +108,7 @@ class BusinessPlanWriter:
         logger.info("ProblemPointsInfo 작성 완료 | 생성 필드 수=%d", len(out.model_dump()))
         return out
 
-    def write_solution(self):
+    def write_solution(self) -> schemas.SolutionPointsInfo:
         request = f"{list(schemas.SolutionPointsInfo.model_fields.keys())} 항목을 작성하라."
 
         try:
@@ -113,7 +121,7 @@ class BusinessPlanWriter:
         logger.info("SolutionPointsInfo 작성 완료 | 생성 필드 수=%d", len(out.model_dump()))
         return out
 
-    def write_budget(self):
+    def write_budget(self) -> schemas.BudgetInfo:
         request = f"{list(schemas.BudgetInfo.model_fields.keys())} 항목을 작성하라."
 
         try:
@@ -126,7 +134,7 @@ class BusinessPlanWriter:
         logger.info("BudgetInfo 작성 완료 | 생성 필드 수=%d", len(out.model_dump()))
         return out
 
-    def write_scaleup(self):
+    def write_scaleup(self) -> schemas.StrategyInfo:
         request = f"{list(schemas.StrategyInfo.model_fields.keys())} 항목을 작성하라."
         
         try:
@@ -139,7 +147,7 @@ class BusinessPlanWriter:
         logger.info("StrategyInfo 작성 완료 | 생성 필드 수=%d", len(out.model_dump()))
         return out
 
-    def write_team(self):
+    def write_team(self) -> schemas.TeamInfo:
         request = f"{list(schemas.TeamInfo.model_fields.keys())} 항목을 작성하라."        
 
         try:
@@ -152,7 +160,7 @@ class BusinessPlanWriter:
         logger.info("TeamInfo 작성 완료 | 생성 필드 수=%d", len(out.model_dump()))
         return out
 
-    def write_summary(self):
+    def write_summary(self) -> schemas.Summary:
         request = f"{list(schemas.Summary.model_fields.keys())} 항목을 작성하라."
 
         try:
@@ -163,6 +171,37 @@ class BusinessPlanWriter:
         self.history.add_user_message(request)
         self.history.add_ai_message(out.model_dump_json())
         logger.info("Summary 작성 완료 | 생성 필드 수=%d", len(out.model_dump()))
+        return out
+    
+    def make_filename(self) -> schemas.FileName:
+        system_msg = self.PROMPTS[schemas.FileName]["system"]
+        user_msg = self.PROMPTS[schemas.FileName]["user"]
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system", system_msg
+                ),
+                MessagesPlaceholder(variable_name="chat_history"),
+                (
+                    "user", user_msg
+                ), 
+            ]
+        )
+        prompt = prompt.partial(
+            bizinfo=self.bizinfo
+        )
+        filename_chain = prompt | self.llm.with_structured_output(schemas.FileName)
+
+        request = "사업계획서 이름을 제안하라."
+
+        try:
+            out = filename_chain.invoke({"request": request, "chat_history": self.history.messages})
+        except Exception as e:
+            logger.error(f"API 연결 실패: {e}")
+        
+        self.history.add_user_message(request)
+        self.history.add_ai_message(out.model_dump_json())
+        logger.info("FileName 생성 완료")
         return out
     
     def write_all(self):
@@ -177,9 +216,23 @@ class BusinessPlanWriter:
 
         module_dir = Path(__file__).resolve().parent
         template_path = module_dir / "사업계획서_양식.docx"
-        out_path = Path("사업계획서.docx")
+        out_path = Path(self.make_filename().filename).with_suffix(".docx")
         render_docx_template(template_path, businessplan, out_path)
         return businessplan
 
+
 if __name__ == "__main__":
-    BusinessPlanWriter().write_all()
+    from dotenv import load_dotenv
+    import json
+
+    load_dotenv()
+
+    user = User("컴엔휴먼", "02", ["기술", "경영"],"제 사업은 개인정보 관리실태 컨설팅입니다. 현재 AI 를 활용한 자동화 사업에 도전하고 있습니다.")
+
+    module_dir = Path(__file__).resolve().parent
+    bizinfo_path = module_dir / "matched_support_programs_sample.json"
+    with bizinfo_path.open("r", encoding="utf-8") as f:
+        bizinfo = json.load(f)[0]
+
+    business_plan_writer = BusinessPlanWriter(user, bizinfo)
+    business_plan_writer.write_all()
