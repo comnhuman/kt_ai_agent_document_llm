@@ -47,8 +47,8 @@ if __name__ == "__main__":
     #     {"name": "", "score": None, "analysis": None, "rceptEngnHmpgUrl": "", "reqstBeginEndDe": "", "bsnsSumryCn": ""},
     #     {"name": "", "score": None, "analysis": None, "rceptEngnHmpgUrl": "", "reqstBeginEndDe": "", "bsnsSumryCn": ""}
     # ]
-    # business_plan_writer = BusinessPlanWriter(user, bizinfo)
     # for bizinfo in bizinfos:
+    #     business_plan_writer = BusinessPlanWriter(user, bizinfo)
     #     business_plan_writer.write_all()
     
     

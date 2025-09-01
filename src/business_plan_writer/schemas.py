@@ -25,9 +25,9 @@ class ProblemPoint(BaseModel):
         default="",
         description="주요 문제점 (시장 현황, 기술적/산업적 한계 등)"
     )
-    sub: str = Field(
-        default="",
-        description="세부 문제점 또는 설명"
+    subs: list[str] = Field(
+        default_factory=list,
+        description="세부 문제점 또는 설명 (여러 개)"
     )
 
 class ProblemPointsInfo(BaseModel):

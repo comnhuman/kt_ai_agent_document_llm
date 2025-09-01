@@ -10,6 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from pathlib import Path
 import uuid
 import logging
+import json
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class BusinessPlanWriter:
     _store = {}
 
     try:
-        # _default_llm = ChatOpenAI(model="gpt-5")
+        # _default_llm = ChatOpenAI(model="gpt-5-nano")
         _default_llm = ChatOpenAI(
             openai_api_key="EMPTY",
             openai_api_base="http://localhost:8000/v1",
@@ -62,9 +63,9 @@ class BusinessPlanWriter:
             self._store[self.session_id] = ChatMessageHistory()
         return self._store[self.session_id]
     
-    def _clear_session_history(self):
-        self._store[self.session_id] = ChatMessageHistory()
-        logger.info(f"세션 {self.session_id} 히스토리 초기화")
+    # def _clear_session_history(self):
+    #     self._store[self.session_id] = ChatMessageHistory()
+    #     logger.info(f"세션 히스토리 초기화")
 
     def _make_chain(self, schema):
         system_msg = self.PROMPTS["system"]["system"]
@@ -230,15 +231,20 @@ class BusinessPlanWriter:
         template_path = module_dir / "사업계획서_양식.docx"
         out_path = Path(self.make_filename().filename).with_suffix(".docx")
         render_docx_template(template_path, businessplan, out_path)
-        logger.info("사업계획서 작성 완료: 출력 파일=%s ====", out_path)
+        logger.info("사업계획서 작성 완료: %s", out_path)
 
-        self._clear_session_history()
         return businessplan
+    
+    def to_json_file(self, data: dict, file_path: Path = Path("businessplan.json"), indent: int = 4, ensure_ascii: bool = False):
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii)
+
+        logger.info("JSON 파일 작성 완료: %s", file_path)
+        return file_path
 
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
-    import json
 
     load_dotenv()
 
@@ -247,7 +253,10 @@ if __name__ == "__main__":
     module_dir = Path(__file__).resolve().parent
     bizinfo_path = module_dir / "matched_support_programs_sample.json"
     with bizinfo_path.open("r", encoding="utf-8") as f:
-        bizinfo = json.load(f)[0]
+        bizinfos = json.load(f)
 
-    business_plan_writer = BusinessPlanWriter(user, bizinfo)
-    business_plan_writer.write_all()
+    for bizinfo in bizinfos:
+        business_plan_writer = BusinessPlanWriter(user, bizinfo)
+        data = business_plan_writer.write_all()
+        business_plan_writer.to_json_file(data)
+        break
